@@ -27,16 +27,18 @@ subfolders; \code{Inf} lists everything below it. Each folder is a separate
 request to Microsoft, so \code{Inf} on a big library takes a while.}
 }
 \value{
-A tibble with one row per file or folder:
+A tibble with one row per file or folder, in folder order:
 \itemize{
-\item \code{path}: the item's path from the library root, e.g. \code{"Budget/2025/plan.xlsx"}
 \item \code{name}: the file or folder name
 \item \code{is_folder}: \code{TRUE} for folders
-\item \code{depth}: \code{0} for items in the starting folder, \code{1} one level down, and so on
-\item \code{size}: in bytes. For a folder, the total size of everything in it.
-\item \code{created}, \code{modified}: date-times (POSIXct), in your computer's time zone
-\item \code{created_by}, \code{modified_by}: people's display names (or an app's name,
+\item \code{size}: an \code{\link[fs:fs_bytes]{fs::fs_bytes()}} number, printed as e.g. \verb{1.05G}. For a
+folder, the total size of everything in it. Sorts, filters and sums
+like any number.
+\item \code{modified}, \code{created}: date-times (POSIXct), in your computer's time zone
+\item \code{modified_by}, \code{created_by}: people's display names (or an app's name,
 e.g. a Power Automate flow, when no person was involved)
+\item \code{depth}: \code{0} for items in the starting folder, \code{1} one level down, and so on
+\item \code{path}: the item's path from the library root, e.g. \code{"Budget/2025/plan.xlsx"}
 \item \code{web_url}: the item's address, to open it in a browser
 \item \code{id}: the item's ID, which stays the same if it's renamed or moved
 }

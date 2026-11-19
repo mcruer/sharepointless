@@ -18,15 +18,17 @@
 #'   subfolders; `Inf` lists everything below it. Each folder is a separate
 #'   request to Microsoft, so `Inf` on a big library takes a while.
 #'
-#' @return A tibble with one row per file or folder:
-#'   * `path`: the item's path from the library root, e.g. `"Budget/2025/plan.xlsx"`
+#' @return A tibble with one row per file or folder, in folder order:
 #'   * `name`: the file or folder name
 #'   * `is_folder`: `TRUE` for folders
-#'   * `depth`: `0` for items in the starting folder, `1` one level down, and so on
-#'   * `size`: in bytes. For a folder, the total size of everything in it.
-#'   * `created`, `modified`: date-times (POSIXct), in your computer's time zone
-#'   * `created_by`, `modified_by`: people's display names (or an app's name,
+#'   * `size`: an [fs::fs_bytes()] number, printed as e.g. `1.05G`. For a
+#'     folder, the total size of everything in it. Sorts, filters and sums
+#'     like any number.
+#'   * `modified`, `created`: date-times (POSIXct), in your computer's time zone
+#'   * `modified_by`, `created_by`: people's display names (or an app's name,
 #'     e.g. a Power Automate flow, when no person was involved)
+#'   * `depth`: `0` for items in the starting folder, `1` one level down, and so on
+#'   * `path`: the item's path from the library root, e.g. `"Budget/2025/plan.xlsx"`
 #'   * `web_url`: the item's address, to open it in a browser
 #'   * `id`: the item's ID, which stays the same if it's renamed or moved
 #' @export
@@ -105,15 +107,15 @@ less_tidy_items <- function(raw, folder, depth) {
   name <- as.character(raw$name)
 
   tibble::tibble(
-    path        = if (folder == "") name else stringr::str_c(folder, "/", name),
     name        = name,
     is_folder   = as.logical(raw$isdir),
-    depth       = depth,
-    size        = as.numeric(raw$size),
-    created     = less_parse_time(less_dig(raw, "createdDateTime")),
-    created_by  = less_who(raw, "createdBy"),
+    size        = fs::as_fs_bytes(as.numeric(raw$size)),
     modified    = less_parse_time(less_dig(raw, "lastModifiedDateTime")),
     modified_by = less_who(raw, "lastModifiedBy"),
+    created     = less_parse_time(less_dig(raw, "createdDateTime")),
+    created_by  = less_who(raw, "createdBy"),
+    depth       = depth,
+    path        = if (folder == "") name else stringr::str_c(folder, "/", name),
     web_url     = less_dig(raw, "webUrl"),
     id          = less_dig(raw, "id")
   )
@@ -121,10 +123,10 @@ less_tidy_items <- function(raw, folder, depth) {
 
 less_contents_template <- function() {
   tibble::tibble(
-    path = character(), name = character(), is_folder = logical(),
-    depth = numeric(), size = numeric(),
-    created = as.POSIXct(character(), tz = ""), created_by = character(),
+    name = character(), is_folder = logical(), size = fs::fs_bytes(),
     modified = as.POSIXct(character(), tz = ""), modified_by = character(),
+    created = as.POSIXct(character(), tz = ""), created_by = character(),
+    depth = numeric(), path = character(),
     web_url = character(), id = character()
   )
 }
