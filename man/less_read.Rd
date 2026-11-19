@@ -17,7 +17,9 @@ the library if it starts with \code{/}. Any value from the \code{path} column of
 
 \item{.f}{A function that reads a file, given its location as the first
 argument: e.g. \code{readxl::read_excel}, \code{readr::read_tsv},
-\code{arrow::read_parquet}, or your own \verb{\\(file) ...}.}
+\code{arrow::read_parquet}. For anything else, write a lambda in either
+purrr style: \code{~ readxl::read_excel(.x, sheet = 2)} or
+\verb{\\(file) readxl::read_excel(file, sheet = 2)}.}
 
 \item{...}{Passed on to \code{.f}.}
 
@@ -38,7 +40,11 @@ are easier: their options autocomplete and have help pages.
 less_read(url, "MPIP/data.tsv", readr::read_tsv)
 less_read(url, "MPIP/data.parquet", arrow::read_parquet)
 
-# A lambda, for anything that doesn't take the file first
+# Any function that takes the file first works as is
+less_read(url, "MPIP/tracker.xlsx", readxl::excel_sheets)
+
+# Otherwise, a lambda (either style)
+less_read(url, "notes.docx", ~ officer::read_docx(path = .x))
 less_read(url, "notes.docx", \(file) officer::read_docx(path = file))
 }
 }

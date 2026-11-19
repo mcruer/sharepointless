@@ -54,6 +54,14 @@ test_that("less_read() takes any reading function, including lambdas", {
     less_read(folder_url, "2025/plan.xlsx", \(file) readxl::excel_sheets(file)),
     c("Summary", "Notes")
   )
+  expect_equal(less_read(folder_url, "2025/plan.xlsx", readxl::excel_sheets), c("Summary", "Notes"))
+})
+
+test_that("less_read() takes purrr-style ~ .x lambdas", {
+  local_fake_files()
+  expect_equal(less_read(folder_url, "2025/plan.xlsx", ~ readxl::excel_sheets(.x)), c("Summary", "Notes"))
+  expect_equal(less_read(folder_url, "2025/plan.xlsx", ~ readxl::read_excel(.x, sheet = 2))$note, "x")
+  expect_error(less_read(folder_url, "2025/old.xls", ~ readxl::read_excel(.x)), "~readxl::read_excel\\(.x\\)")
 })
 
 test_that("a missing file says where it looked and how paths work", {

@@ -13,7 +13,9 @@
 #'   [less_contents()] works.
 #' @param .f A function that reads a file, given its location as the first
 #'   argument: e.g. `readxl::read_excel`, `readr::read_tsv`,
-#'   `arrow::read_parquet`, or your own `\(file) ...`.
+#'   `arrow::read_parquet`. For anything else, write a lambda in either
+#'   purrr style: `~ readxl::read_excel(.x, sheet = 2)` or
+#'   `\(file) readxl::read_excel(file, sheet = 2)`.
 #' @param ... Passed on to `.f`.
 #' @param library Which library, if `x` is a site with more than one. See
 #'   [less_drive()]. Rarely needed.
@@ -25,19 +27,25 @@
 #' less_read(url, "MPIP/data.tsv", readr::read_tsv)
 #' less_read(url, "MPIP/data.parquet", arrow::read_parquet)
 #'
-#' # A lambda, for anything that doesn't take the file first
+#' # Any function that takes the file first works as is
+#' less_read(url, "MPIP/tracker.xlsx", readxl::excel_sheets)
+#'
+#' # Otherwise, a lambda (either style)
+#' less_read(url, "notes.docx", ~ officer::read_docx(path = .x))
 #' less_read(url, "notes.docx", \(file) officer::read_docx(path = file))
 #' }
 less_read <- function(x, path, .f, ..., library = NULL) {
   # Name the reader for error messages before anything evaluates `.f`.
   reader <- if (missing(.f)) "" else rlang::as_label(rlang::enexpr(.f))
   less_check_file_path(if (missing(path)) NULL else path)
-  if (missing(.f) || !is.function(.f)) {
+  if (missing(.f) || !(is.function(.f) || rlang::is_formula(.f))) {
     cli::cli_abort(c(
-      "{.arg .f} must be a function that reads a file, like {.code readxl::read_excel}.",
+      "{.arg .f} must be a function that reads a file, like {.code readxl::read_excel} or {.code ~ readxl::read_excel(.x, sheet = 2)}.",
       "i" = "For Excel or CSV files, {.fn less_read_excel} and {.fn less_read_csv} need no {.arg .f}."
     ))
   }
+
+  .f <- rlang::as_function(.f)
 
   place <- less_locate(x, library)
   file <- less_resolve_path(path, place$base)

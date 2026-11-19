@@ -114,8 +114,8 @@ are verified live by Geordie. `less_url()` (parse only, prints site/library/fold
 passes on Geordie's Windows machine against the real Microsoft365R.
 
 `less_read(x, path, .f, ..., library)`, `less_read_excel()`, `less_read_csv()`
-built and tested in the sandbox (real xlsx/csv files via a fake drive); not yet
-run live. They download with `drive$download_file(src, dest, overwrite)`
+verified live 2026-11-19 (multi-sheet xlsx, `sheet =`, a plain function as
+`.f`). `.f` also takes purrr-style `~ .x` lambdas via `rlang::as_function()`. They download with `drive$download_file(src, dest, overwrite)`
 (signature read from Microsoft365R's source: `src` is relative to the library
 root; it removes partial files on failure and refuses folders) to a temp file
 that keeps the extension, call `.f(temp, ...)`, and always delete the temp file.
