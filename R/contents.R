@@ -5,18 +5,25 @@
 #' of Microsoft's nested metadata. Set `max_depth` to include subfolders too.
 #'
 #' @param x Where to look. Any of:
-#'   * a library address copied from the browser (ending `/Forms/AllItems.aspx`).
-#'     If you'd clicked into a folder, the listing starts in that folder.
-#'   * a site address, plus `library` to say which library.
+#'   * a library or folder address copied from the browser (containing
+#'     `/Forms/AllItems.aspx`). A folder address starts the listing in that
+#'     folder.
+#'   * a site address (the site's default library is used; see `library`).
 #'   * a drive object from [less_drive()].
-#' @param library Which library, if `x` is a site address. See [less_drive()].
-#' @param path Folder to start in, relative to the library root, e.g.
-#'   `"Budget/2025"`. Overrides any folder in `x`. Leave `NULL` to start at
-#'   the root (or the folder in `x`).
+#' @param path Folder to list, like a path on your computer:
+#'   * `NULL` (the default): wherever `x` points.
+#'   * `"MPIP"` or `"Budget/2025"`: relative to wherever `x` points.
+#'   * `"/Budget"`: starting with `/` means from the top of the library,
+#'     whatever `x` points to. `"/"` is the library itself.
+#'
+#'   Any value from the `path` column of an earlier result works here.
 #' @param max_depth How many levels of subfolders to go into. `0` (the
 #'   default) lists just the starting folder; `1` adds the contents of its
 #'   subfolders; `Inf` lists everything below it. Each folder is a separate
 #'   request to Microsoft, so `Inf` on a big library takes a while.
+#' @param library Which library, if `x` is a site with more than one and you
+#'   don't want the default. See [less_drive()]. Rarely needed: a library or
+#'   folder address already says which library.
 #'
 #' @return A tibble with one row per file or folder, in folder order:
 #'   * `name`: the file or folder name
@@ -28,46 +35,75 @@
 #'   * `modified_by`, `created_by`: people's display names (or an app's name,
 #'     e.g. a Power Automate flow, when no person was involved)
 #'   * `depth`: `0` for items in the starting folder, `1` one level down, and so on
-#'   * `path`: the item's path from the library root, e.g. `"Budget/2025/plan.xlsx"`
+#'   * `path`: the item's full path in the library, starting with `/`, e.g.
+#'     `"/Budget/2025/plan.xlsx"`. Feed it back to `path` to go there.
 #'   * `web_url`: the item's address, to open it in a browser
 #'   * `id`: the item's ID, which stays the same if it's renamed or moved
 #' @export
 #' @examples
 #' \dontrun{
-#' # Top level of a library, straight from the browser
-#' less_contents("https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx")
+#' url <- "https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx"
 #'
-#' # Everything in one folder and below
-#' less_contents("https://contoso.sharepoint.com/sites/Team",
-#'               library = "^Documents$", path = "Budget", max_depth = Inf)
+#' less_contents(url)                         # top of the library
+#' less_contents(url, "Budget")               # a folder in it
+#' less_contents(url, "Budget", max_depth = Inf)   # and everything below
 #'
-#' # Reuse a drive object
-#' drive <- less_drive("https://contoso.sharepoint.com/sites/Team")
-#' drive |> less_contents(max_depth = 1)
+#' # With a folder address, paths are relative to that folder...
+#' less_contents(url_folder, "2025")
+#' # ...and a leading / goes back to the top of the library
+#' less_contents(url_folder, "/")
+#'
+#' # Go into a folder from an earlier result
+#' contents <- less_contents(url)
+#' less_contents(url, contents$path[1])
 #' }
-less_contents <- function(x, library = NULL, path = NULL, max_depth = 0) {
+less_contents <- function(x, path = NULL, max_depth = 0, library = NULL) {
   if (!is.numeric(max_depth) || length(max_depth) != 1 || is.na(max_depth) || max_depth < 0) {
     cli::cli_abort("{.arg max_depth} must be a single number, 0 or more (use {.code Inf} for everything).")
+  }
+  if (!is.null(path) && !rlang::is_string(path)) {
+    cli::cli_abort("{.arg path} must be a single folder path, like {.val Budget/2025}.")
   }
 
   if (inherits(x, "ms_drive")) {
     drive <- x
-    url_folder <- NULL
+    base <- ""
   } else {
     drive <- less_drive(x, library = library)
-    url_folder <- less_parse_url(x)$folder
+    base <- less_parse_url(x)$folder %||% ""
   }
 
-  start <- (path %||% url_folder %||% "") |> stringr::str_remove_all("^/+|/+$")
+  start <- less_resolve_path(path, base)
 
-  less_contents_walk(drive, start, depth = 0, max_depth = max_depth) |>
+  hint <- if (!is.null(path) && !stringr::str_starts(path, "/") && base != "") {
+    cli::format_inline("{.arg path} is relative to the folder in your URL ({.val {stringr::str_c('/', base)}}). Start it with {.val /} to go from the top of the library.")
+  } else {
+    "Check the spelling, or list the folder above it to see what's there."
+  }
+
+  less_contents_walk(drive, start, depth = 0, max_depth = max_depth, hint = hint) |>
     dplyr::arrange(.data$path)
 }
 
+# Turn a user's `path` into a folder relative to the library root, without
+# leading or trailing slashes ("" is the root). Like a file system: a leading
+# "/" starts from the library root; anything else is relative to `base`, the
+# folder the URL points to.
+less_resolve_path <- function(path, base) {
+  if (is.null(path)) {
+    return(base)
+  }
+  tidy <- function(p) p |> stringr::str_replace_all("/{2,}", "/") |> stringr::str_remove_all("^/+|/+$")
+  if (stringr::str_starts(path, "/")) {
+    return(tidy(path))
+  }
+  tidy(stringr::str_c(base, "/", path))
+}
+
 # One folder, then (if allowed) each subfolder, depth-first.
-less_contents_walk <- function(drive, folder, depth, max_depth) {
+less_contents_walk <- function(drive, folder, depth, max_depth, hint = NULL) {
   items <- drive |>
-    less_list_raw(folder) |>
+    less_list_raw(folder, hint) |>
     less_tidy_items(folder, depth)
 
   if (depth >= max_depth) {
@@ -77,19 +113,22 @@ less_contents_walk <- function(drive, folder, depth, max_depth) {
   children <- items |>
     dplyr::filter(.data$is_folder) |>
     dplyr::pull(.data$path) |>
-    purrr::map(\(p) less_contents_walk(drive, p, depth + 1, max_depth))
+    stringr::str_remove("^/") |>
+    purrr::map(\(p) less_contents_walk(drive, p, depth + 1, max_depth, hint))
 
   dplyr::bind_rows(items, children)
 }
 
-less_list_raw <- function(drive, folder) {
+less_list_raw <- function(drive, folder, hint = NULL) {
   tryCatch(
     drive$list_files(if (folder == "") "/" else folder, info = "all"),
     error = function(e) {
+      library <- tryCatch(drive$properties$name, error = function(e) NULL)
+      where <- if (is.null(library)) "" else cli::format_inline(" in library {.val {library}}")
       cli::cli_abort(c(
-        "Couldn't list the folder {.val {if (folder == '') '/' else folder}}.",
+        "Couldn't list the folder {.val {stringr::str_c('/', folder)}}{where}.",
         "x" = conditionMessage(e),
-        "i" = "Check the folder exists and that {.arg path} is relative to the library root, e.g. {.val Budget/2025}."
+        "i" = "{hint}"
       ), call = NULL)
     }
   )
@@ -115,7 +154,7 @@ less_tidy_items <- function(raw, folder, depth) {
     created     = less_parse_time(less_dig(raw, "createdDateTime")),
     created_by  = less_who(raw, "createdBy"),
     depth       = depth,
-    path        = if (folder == "") name else stringr::str_c(folder, "/", name),
+    path        = if (folder == "") stringr::str_c("/", name) else stringr::str_c("/", folder, "/", name),
     web_url     = less_dig(raw, "webUrl"),
     id          = less_dig(raw, "id")
   )

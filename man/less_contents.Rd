@@ -4,27 +4,36 @@
 \alias{less_contents}
 \title{List the contents of a SharePoint document library}
 \usage{
-less_contents(x, library = NULL, path = NULL, max_depth = 0)
+less_contents(x, path = NULL, max_depth = 0, library = NULL)
 }
 \arguments{
 \item{x}{Where to look. Any of:
 \itemize{
-\item a library address copied from the browser (ending \verb{/Forms/AllItems.aspx}).
-If you'd clicked into a folder, the listing starts in that folder.
-\item a site address, plus \code{library} to say which library.
+\item a library or folder address copied from the browser (containing
+\verb{/Forms/AllItems.aspx}). A folder address starts the listing in that
+folder.
+\item a site address (the site's default library is used; see \code{library}).
 \item a drive object from \code{\link[=less_drive]{less_drive()}}.
 }}
 
-\item{library}{Which library, if \code{x} is a site address. See \code{\link[=less_drive]{less_drive()}}.}
+\item{path}{Folder to list, like a path on your computer:
+\itemize{
+\item \code{NULL} (the default): wherever \code{x} points.
+\item \code{"MPIP"} or \code{"Budget/2025"}: relative to wherever \code{x} points.
+\item \code{"/Budget"}: starting with \code{/} means from the top of the library,
+whatever \code{x} points to. \code{"/"} is the library itself.
+}
 
-\item{path}{Folder to start in, relative to the library root, e.g.
-\code{"Budget/2025"}. Overrides any folder in \code{x}. Leave \code{NULL} to start at
-the root (or the folder in \code{x}).}
+Any value from the \code{path} column of an earlier result works here.}
 
 \item{max_depth}{How many levels of subfolders to go into. \code{0} (the
 default) lists just the starting folder; \code{1} adds the contents of its
 subfolders; \code{Inf} lists everything below it. Each folder is a separate
 request to Microsoft, so \code{Inf} on a big library takes a while.}
+
+\item{library}{Which library, if \code{x} is a site with more than one and you
+don't want the default. See \code{\link[=less_drive]{less_drive()}}. Rarely needed: a library or
+folder address already says which library.}
 }
 \value{
 A tibble with one row per file or folder, in folder order:
@@ -38,7 +47,8 @@ like any number.
 \item \code{modified_by}, \code{created_by}: people's display names (or an app's name,
 e.g. a Power Automate flow, when no person was involved)
 \item \code{depth}: \code{0} for items in the starting folder, \code{1} one level down, and so on
-\item \code{path}: the item's path from the library root, e.g. \code{"Budget/2025/plan.xlsx"}
+\item \code{path}: the item's full path in the library, starting with \code{/}, e.g.
+\code{"/Budget/2025/plan.xlsx"}. Feed it back to \code{path} to go there.
 \item \code{web_url}: the item's address, to open it in a browser
 \item \code{id}: the item's ID, which stays the same if it's renamed or moved
 }
@@ -50,15 +60,19 @@ of Microsoft's nested metadata. Set \code{max_depth} to include subfolders too.
 }
 \examples{
 \dontrun{
-# Top level of a library, straight from the browser
-less_contents("https://contoso.sharepoint.com/sites/Team/Shared\%20Documents/Forms/AllItems.aspx")
+url <- "https://contoso.sharepoint.com/sites/Team/Shared\%20Documents/Forms/AllItems.aspx"
 
-# Everything in one folder and below
-less_contents("https://contoso.sharepoint.com/sites/Team",
-              library = "^Documents$", path = "Budget", max_depth = Inf)
+less_contents(url)                         # top of the library
+less_contents(url, "Budget")               # a folder in it
+less_contents(url, "Budget", max_depth = Inf)   # and everything below
 
-# Reuse a drive object
-drive <- less_drive("https://contoso.sharepoint.com/sites/Team")
-drive |> less_contents(max_depth = 1)
+# With a folder address, paths are relative to that folder...
+less_contents(url_folder, "2025")
+# ...and a leading / goes back to the top of the library
+less_contents(url_folder, "/")
+
+# Go into a folder from an earlier result
+contents <- less_contents(url)
+less_contents(url, contents$path[1])
 }
 }

@@ -153,7 +153,8 @@ less_drive <- function(url, library = NULL) {
       stringr::str_extract("[^/]+$") |>
       purrr::map_chr(\(u) if (is.na(u)) "" else utils::URLdecode(u))
     hits <- stringr::str_detect(names, pattern) | stringr::str_detect(url_names, pattern)
-    return(less_pick_one(drives[hits], names, desc = cli::format_inline("matching {.val {library}}")))
+    hint <- cli::format_inline("Did you mean {.code path = \"{library}\"}? {.arg library} picks a document library, not a folder.")
+    return(less_pick_one(drives[hits], names, desc = cli::format_inline("matching {.val {library}}"), hint = hint))
   }
 
   if (!is.null(parsed$library)) {
@@ -203,14 +204,15 @@ less_list_drives <- function(url) {
   drives
 }
 
-less_pick_one <- function(matches, all_names, desc, call = rlang::caller_env()) {
+less_pick_one <- function(matches, all_names, desc, hint = NULL, call = rlang::caller_env()) {
   if (length(matches) == 1) {
     return(matches[[1]])
   }
   if (length(matches) == 0) {
     cli::cli_abort(c(
       "No library {desc}. Libraries on this site:",
-      purrr::set_names(all_names, "*")
+      purrr::set_names(all_names, "*"),
+      if (!is.null(hint)) c("i" = "{hint}")
     ), call = call)
   }
   cli::cli_abort(c(

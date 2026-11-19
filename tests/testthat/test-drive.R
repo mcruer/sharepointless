@@ -3,7 +3,7 @@ site <- "https://contoso.sharepoint.com/sites/Team"
 local_libraries <- function(env = parent.frame()) {
   libraries <- list(
     fake_library("Documents", stringr::str_c(site, "/Shared%20Documents"), "b!docs"),
-    fake_library("Rapports de l’équipe", stringr::str_c(site, "/Rapports"), "b!rap"),
+    fake_library("Rapports de l\u2019\u00e9quipe", stringr::str_c(site, "/Rapports"), "b!rap"),
     fake_library("Reports", stringr::str_c(site, "/Reports"), "b!rep"),
     fake_library("Reports archive", stringr::str_c(site, "/Reports%20archive"), "b!arc")
   )
@@ -26,7 +26,7 @@ test_that("library = matches the shown name or the address name", {
 
 test_that("library = matches partially, so accents and curly apostrophes needn't be retyped", {
   local_libraries()
-  expect_equal(name_of(less_drive(site, library = "^rapports")), "Rapports de l’équipe")
+  expect_equal(name_of(less_drive(site, library = "^rapports")), "Rapports de l\u2019\u00e9quipe")
 })
 
 test_that("library = accepts a library ID", {
@@ -38,6 +38,7 @@ test_that("ambiguous or unmatched library = lists the choices", {
   local_libraries()
   expect_error(less_drive(site, library = "report"), "More than one")
   expect_error(less_drive(site, library = "zzz"), "Reports archive")
+  expect_error(less_drive(site, library = "Capital Program"), "Did you mean")
   expect_error(less_drive(stringr::str_c(site, "/Nope/Forms/AllItems.aspx")), "No library")
 })
 

@@ -125,9 +125,9 @@ override, `max_depth = 1`, folder names with spaces.
    graph login; caches login/site/drive objects in a package-level environment
    so repeated calls don't re-authenticate. Check env vars up front with a
    helpful error if missing.
-2. **List a library's contents → tibble** (`less_contents()`). One level
-   (`path` argument, relative to the library root, or the folder in a pasted
-   browser URL) and recursive (`max_depth`), with `path` and `depth` columns,
+2. **List a library's contents → tibble** (`less_contents(x, path, max_depth,
+   library)`). One level or recursive (`max_depth`), with absolute `path` and
+   `depth` columns,
    created/modified times as local POSIXct, created/modified by, `web_url`,
    `id`.
 3. **Escape hatch.** A way to get the raw Microsoft365R site/drive objects for
@@ -153,6 +153,13 @@ set up anywhere yet).
   and works out the site/library/folder itself. Users keep one variable per
   place and never take URLs apart. Don't add helpers that return URL pieces
   for passing between functions; `less_url()` exists only as a diagnostic.
+- **Paths work like a file system.** `path` is relative to wherever the URL
+  points (its folder, else the library root); a leading `/` means the library
+  root. Outputs report paths absolute, with a leading `/`, so any `path` value
+  from a result can be fed straight back in, whatever URL is used.
+- **Argument order: URL, then path, then options, then `library`.** The thing
+  users change most comes second (`less_contents(url, "MPIP")`). `library` is
+  a rare override near the end, except in `less_drive()`, whose job it is.
 - One-liners for common tasks; sensible defaults; pipe-friendly; tibble out.
 - Fix the annoyances once: tibbles, flattened metadata, parsed times, clear
   errors.

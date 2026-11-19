@@ -46,14 +46,14 @@ fake_drive <- function(tree) {
 #     2025/
 #       Empty/
 #       plan.xlsx (3 GB)
-#     Rapport de l'équipe.xlsx (curly apostrophe, made by a flow)
+#     Rapport de l'equipe.xlsx (curly apostrophe, made by a flow)
 #   Travel.docx
 example_tree <- function() {
   list(
     "/" = c(fake_item("Budget", TRUE), fake_item("Travel.docx")),
     "Budget" = c(
       fake_item("2025", TRUE),
-      fake_item("Rapport de l’équipe.xlsx", by = "Nightly flow", app = TRUE)
+      fake_item("Rapport de l\u2019\u00e9quipe.xlsx", by = "Nightly flow", app = TRUE)
     ),
     "Budget/2025" = c(fake_item("Empty", TRUE), fake_item("plan.xlsx", size = 3e9)),
     "Budget/2025/Empty" = character()
