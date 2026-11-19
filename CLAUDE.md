@@ -127,8 +127,9 @@ a fake drive built to match the real shape below; not yet run live.
 
 ## Conventions in chat
 
-Geordie keeps `url_site`, `url_library` and `url_folder` in his global
-environment. In code examples, use those names rather than placeholder URLs.
+Geordie keeps a SharePoint address in a global variable called `url`
+(currently a folder URL). In code examples, use `url` rather than a
+placeholder URL.
 Never write to the user's global environment from package code.
 
 ## Later (not v1)
