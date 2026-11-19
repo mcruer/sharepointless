@@ -57,3 +57,53 @@ less_url_folder <- function(url, site, library) {
   folder <- id |> stringr::str_sub(stringr::str_length(root) + 1) |> stringr::str_remove_all("^/+|/+$")
   if (folder == "") NULL else folder
 }
+
+#' Take a SharePoint URL apart
+#'
+#' Shows which site, library and folder a SharePoint address points to. Paste
+#' whatever is in your browser's address bar. Nothing is sent to Microsoft:
+#' this only reads the address.
+#'
+#' Every `less_` function already accepts any of these addresses and does this
+#' itself. Use `less_url()` to check what an address contains, or to get the
+#' site address out of a library or folder address.
+#'
+#' @param url A SharePoint address: a site, a library view (containing
+#'   `/Forms/`), or a folder inside one (a library view with `?id=...`).
+#'
+#' @return A list with:
+#'   * `site`: the site's address
+#'   * `library`: the library's name **as it appears in addresses**, e.g.
+#'     `"Shared Documents"` for the library shown as "Documents". `NULL` for a
+#'     site address.
+#'   * `folder`: the folder's path within the library, e.g. `"Budget/2025"`.
+#'     `NULL` if the address isn't inside a folder.
+#'
+#'   It prints as a short summary.
+#' @export
+#' @examples
+#' less_url("https://contoso.sharepoint.com/sites/Team")
+#'
+#' parts <- less_url(paste0(
+#'   "https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx",
+#'   "?id=%2Fsites%2FTeam%2FShared%20Documents%2FBudget%2F2025"
+#' ))
+#' parts
+#' parts$site
+less_url <- function(url) {
+  structure(less_parse_url(url), class = "less_url")
+}
+
+#' @export
+print.less_url <- function(x, ...) {
+  library <- if (is.null(x$library)) "{.emph none (this is a site address)}" else "{.val {x$library}}"
+  folder <- dplyr::case_when(
+    !is.null(x$folder) ~ "{.val {x$folder}}",
+    !is.null(x$library) ~ "{.emph none (library root)}",
+    .default = NA_character_
+  )
+  items <- c(Site = "{.url {x$site}}", Library = library, Folder = folder)
+  cli::cli_h3("SharePoint URL")
+  cli::cli_dl(items[!is.na(items)])
+  invisible(x)
+}

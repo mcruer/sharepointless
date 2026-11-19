@@ -54,6 +54,9 @@ drive <- less_drive("https://contoso.sharepoint.com/sites/Team", library = "^Rep
 less_contents("https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx",
               max_depth = 1)
 
+# See what a URL points to (no sign-in needed)
+less_url("https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx")
+
 # The raw Microsoft365R objects, for anything not wrapped
 site <- less_site("https://contoso.sharepoint.com/sites/Team")
 gr   <- less_login()

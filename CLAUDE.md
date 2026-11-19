@@ -99,7 +99,8 @@ Subsites (`/sites/A/B`) resolve fine through Graph.
 v1 is built. `less_details()`, `less_details_to_renviron()`, `less_login()`,
 `less_site()`, `less_drive()` (accepts library view URLs; `library =` is a
 case-insensitive regex or a drive ID; defaults to the site's default library)
-are verified live by Geordie. `less_contents()` is tested in the sandbox against
+are verified live by Geordie. `less_url()` (parse only, prints site/library/folder) is tested in the sandbox.
+`less_contents()` is tested in the sandbox against
 a fake drive built to match the real shape below; not yet run live.
 
 `list_files(info = "all")` shape (verified live): data.frame with `name`,
@@ -123,6 +124,12 @@ a fake drive built to match the real shape below; not yet run live.
    `id`.
 3. **Escape hatch.** A way to get the raw Microsoft365R site/drive objects for
    anything the wrapper doesn't cover.
+
+## Conventions in chat
+
+Geordie keeps `url_site`, `url_library` and `url_folder` in his global
+environment. In code examples, use those names rather than placeholder URLs.
+Never write to the user's global environment from package code.
 
 ## Later (not v1)
 
