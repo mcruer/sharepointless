@@ -11,7 +11,9 @@ less_drive(url, library = NULL)
 \verb{/Forms/AllItems.aspx}), or a site address.}
 
 \item{library}{Which library to open, as a regular expression matched
-against library names (case-insensitive), or a library's ID. Partial
+(case-insensitively) against each library's name, either as shown in
+SharePoint ("Documents") or as it appears in addresses ("Shared
+Documents"), or a library's ID. Partial
 matches are fine, so you don't need to retype accents or curly
 apostrophes. Leave \code{NULL} to use the library in \code{url}, or the site's
 default library if \code{url} is a site address.}

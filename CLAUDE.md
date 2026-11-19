@@ -139,6 +139,11 @@ set up anywhere yet).
 
 ## Design principles
 
+- **Any URL in, the right thing out.** Every `less_` function takes any
+  SharePoint URL (site, library view, or folder view) as its first argument
+  and works out the site/library/folder itself. Users keep one variable per
+  place and never take URLs apart. Don't add helpers that return URL pieces
+  for passing between functions; `less_url()` exists only as a diagnostic.
 - One-liners for common tasks; sensible defaults; pipe-friendly; tibble out.
 - Fix the annoyances once: tibbles, flattened metadata, parsed times, clear
   errors.

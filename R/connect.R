@@ -117,7 +117,9 @@ less_site <- function(url) {
 #' @param url A library address copied from the browser (ending
 #'   `/Forms/AllItems.aspx`), or a site address.
 #' @param library Which library to open, as a regular expression matched
-#'   against library names (case-insensitive), or a library's ID. Partial
+#'   (case-insensitively) against each library's name, either as shown in
+#'   SharePoint ("Documents") or as it appears in addresses ("Shared
+#'   Documents"), or a library's ID. Partial
 #'   matches are fine, so you don't need to retype accents or curly
 #'   apostrophes. Leave `NULL` to use the library in `url`, or the site's
 #'   default library if `url` is a site address.
@@ -143,7 +145,14 @@ less_drive <- function(url, library = NULL) {
     if (length(by_id) == 1) {
       return(by_id[[1]])
     }
-    hits <- stringr::str_detect(names, stringr::regex(library, ignore_case = TRUE))
+    # Match the display name ("Documents") or the name in the library's
+    # address ("Shared Documents"), so whichever one the user knows works.
+    pattern <- stringr::regex(library, ignore_case = TRUE)
+    url_names <- drives |>
+      purrr::map_chr(\(d) d$properties$webUrl %||% "") |>
+      stringr::str_extract("[^/]+$") |>
+      purrr::map_chr(\(u) if (is.na(u)) "" else utils::URLdecode(u))
+    hits <- stringr::str_detect(names, pattern) | stringr::str_detect(url_names, pattern)
     return(less_pick_one(drives[hits], names, desc = cli::format_inline("matching {.val {library}}")))
   }
 
