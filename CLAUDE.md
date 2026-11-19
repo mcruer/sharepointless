@@ -108,8 +108,10 @@ v1 is built. `less_details()`, `less_details_to_renviron()`, `less_login()`,
 `less_site()`, `less_drive()` (accepts library view URLs; `library =` is a
 case-insensitive regex or a drive ID; defaults to the site's default library)
 are verified live by Geordie. `less_url()` (parse only, prints site/library/folder) is tested in the sandbox.
-`less_contents()` verified live 2026-11-19: folder from a pasted URL, `path = ""`
-override, `max_depth = 1`, folder names with spaces.
+`less_contents()` verified live 2026-11-19: folder from a pasted URL, relative
+`path` ("MPIP" inside the URL's folder), `"/"` for the library root,
+`max_depth = 1`, folder names with spaces. Full test suite (78 expectations)
+passes on Geordie's Windows machine against the real Microsoft365R.
 
 `list_files(info = "all")` shape (verified live): data.frame with `name`,
 `size` (int), `isdir`, `id`, `@microsoft.graph.downloadUrl`,
