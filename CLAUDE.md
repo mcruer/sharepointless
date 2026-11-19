@@ -113,6 +113,15 @@ are verified live by Geordie. `less_url()` (parse only, prints site/library/fold
 `max_depth = 1`, folder names with spaces. Full test suite (78 expectations)
 passes on Geordie's Windows machine against the real Microsoft365R.
 
+`less_read(x, path, .f, ..., library)`, `less_read_excel()`, `less_read_csv()`
+built and tested in the sandbox (real xlsx/csv files via a fake drive); not yet
+run live. They download with `drive$download_file(src, dest, overwrite)`
+(signature read from Microsoft365R's source: `src` is relative to the library
+root; it removes partial files on failure and refuses folders) to a temp file
+that keeps the extension, call `.f(temp, ...)`, and always delete the temp file.
+Shared URL/path plumbing lives in `R/paths.R` (`less_locate()`,
+`less_resolve_path()`, `less_path_hint()`): use it for every new function.
+
 `list_files(info = "all")` shape (verified live): data.frame with `name`,
 `size` (int), `isdir`, `id`, `@microsoft.graph.downloadUrl`,
 `createdDateTime` / `lastModifiedDateTime` (chr, ISO 8601 UTC), `eTag`,
@@ -144,7 +153,8 @@ Never write to the user's global environment from package code.
 
 ## Later (not v1)
 
-Download/upload, SharePoint lists → tibble, item permissions (via
+Writing back (`less_write(x, path, data, .f)` + wrappers, mirroring
+`less_read`), downloading files to disk, SharePoint lists → tibble, item permissions (via
 `do_operation()`), app-only auth for scheduled jobs (needs a certificate; not
 set up anywhere yet).
 

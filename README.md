@@ -54,6 +54,12 @@ drive <- less_drive("https://contoso.sharepoint.com/sites/Team", library = "^Rep
 less_contents("https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx",
               max_depth = 1)
 
+# Read files straight into R. Paths are relative to wherever the URL points;
+# a leading / starts from the top of the library.
+less_read_excel(url, "Budget/plan.xlsx", sheet = "Summary")
+less_read_csv(url, "/Extracts/schools.csv")
+less_read(url, "data.parquet", arrow::read_parquet)   # any reading function
+
 # See what a URL points to (no sign-in needed)
 less_url("https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx")
 

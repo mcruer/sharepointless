@@ -65,39 +65,12 @@ less_contents <- function(x, path = NULL, max_depth = 0, library = NULL) {
     cli::cli_abort("{.arg path} must be a single folder path, like {.val Budget/2025}.")
   }
 
-  if (inherits(x, "ms_drive")) {
-    drive <- x
-    base <- ""
-  } else {
-    drive <- less_drive(x, library = library)
-    base <- less_parse_url(x)$folder %||% ""
-  }
+  place <- less_locate(x, library)
+  start <- less_resolve_path(path, place$base)
+  hint <- less_path_hint(path, place$base)
 
-  start <- less_resolve_path(path, base)
-
-  hint <- if (!is.null(path) && !stringr::str_starts(path, "/") && base != "") {
-    cli::format_inline("{.arg path} is relative to the folder in your URL ({.val {stringr::str_c('/', base)}}). Start it with {.val /} to go from the top of the library.")
-  } else {
-    "Check the spelling, or list the folder above it to see what's there."
-  }
-
-  less_contents_walk(drive, start, depth = 0, max_depth = max_depth, hint = hint) |>
+  less_contents_walk(place$drive, start, depth = 0, max_depth = max_depth, hint = hint) |>
     dplyr::arrange(.data$path)
-}
-
-# Turn a user's `path` into a folder relative to the library root, without
-# leading or trailing slashes ("" is the root). Like a file system: a leading
-# "/" starts from the library root; anything else is relative to `base`, the
-# folder the URL points to.
-less_resolve_path <- function(path, base) {
-  if (is.null(path)) {
-    return(base)
-  }
-  tidy <- function(p) p |> stringr::str_replace_all("/{2,}", "/") |> stringr::str_remove_all("^/+|/+$")
-  if (stringr::str_starts(path, "/")) {
-    return(tidy(path))
-  }
-  tidy(stringr::str_c(base, "/", path))
 }
 
 # One folder, then (if allowed) each subfolder, depth-first.
@@ -123,8 +96,7 @@ less_list_raw <- function(drive, folder, hint = NULL) {
   tryCatch(
     drive$list_files(if (folder == "") "/" else folder, info = "all"),
     error = function(e) {
-      library <- tryCatch(drive$properties$name, error = function(e) NULL)
-      where <- if (is.null(library)) "" else cli::format_inline(" in library {.val {library}}")
+      where <- less_in_library(drive)
       cli::cli_abort(c(
         "Couldn't list the folder {.val {stringr::str_c('/', folder)}}{where}.",
         "x" = conditionMessage(e),
