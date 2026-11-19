@@ -1,0 +1,319 @@
+---
+title: "Connecting R to SharePoint in the OPS"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Connecting R to SharePoint in the OPS}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+> **This guide is specific to the Ontario Public Service (OPS).** sharepointless
+> itself works in any Microsoft 365 organization. Elsewhere the overall shape is
+> the same (register an app, get its permissions approved, sign in from R), but
+> the ticket process, and which permissions your IT department will approve,
+> will differ. If you're outside the OPS, use this as a map of what to ask your
+> IT department for.
+
+## Who needs this
+
+Anyone who wants to use sharepointless (or Microsoft365R directly) and hasn't
+yet set up an app registration. **The main obstacle is permissions, not R.**
+Your app needs Microsoft Graph permissions that only IT can approve. Once
+they're approved, the R side takes a few minutes.
+
+## Overview
+
+This guide gets an OPS user from nothing to reading and writing SharePoint
+document libraries from R, signed in as themselves. Following these steps
+should take under an hour of your own time, plus however long IT takes to
+approve permissions.
+
+The approach: register your own app in Microsoft Entra, have IT approve its
+Microsoft Graph permissions, then sign in from R with the **AzureGraph** and
+**Microsoft365R** packages. Every call runs as you, so R can never reach
+anything you can't already open in the browser.
+
+You need:
+
+- An OPS Microsoft 365 account with access to the SharePoint site you want to
+  work with
+- R and RStudio on your Windows machine
+- Access to the Entra admin centre / Azure portal (App registrations), which
+  OPS users had in our case
+- Patience with Microsoft's error codes. Every one we hit is in the
+  Troubleshooting section.
+
+## Step 1: Register the app in Entra
+
+Useful links: [App registrations in the Azure portal](https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RegisteredApps)
+· the OPS intranet guide *How to Register an App in Microsoft Entra ID* (search
+the SharePoint Online portal on the OPS intranet).
+
+1. Sign in to the Azure portal with your OPS account and go to
+   **Microsoft Entra ID → App registrations → New registration**.
+2. **Name:** anything recognizable. Ours is `Microsoft365R`.
+3. **Supported account types:** *Accounts in this organizational directory
+   only* (Government of Ontario only, single tenant).
+4. Leave the redirect URI blank for now (Step 3 sets it) and click
+   **Register**.
+5. On the app's **Overview** page, note two values. You'll need both in R:
+    - **Application (client) ID**
+    - **Directory (tenant) ID**
+
+You become an owner of the registration automatically, which means you can fix
+its Authentication settings yourself later without a ticket.
+
+## Step 2: Request API permissions
+
+Request all five permissions below. They look partly redundant, but requests
+with fewer haven't worked.
+
+**2a. Add the permissions to the app.** On the app, go to **API permissions →
+Add a permission**, choose **Microsoft Graph** (or **SharePoint**), then
+**Delegated** or **Application permissions**, search for each name, tick it,
+and click **Add permissions**.
+
+| API             | Permission          | Type        | Admin consent required |
+|-----------------|---------------------|-------------|------------------------|
+| Microsoft Graph | Sites.ReadWrite.All | Delegated   | No                     |
+| Microsoft Graph | Sites.Selected      | Delegated   | No                     |
+| Microsoft Graph | Sites.Selected      | Application | Yes                    |
+| Microsoft Graph | User.Read           | Delegated   | No (added by default)  |
+| SharePoint      | Sites.Selected      | Application | Yes                    |
+
+The first one is spelled `Sites.ReadWrite.All`, with no dot between Read and
+Write. The two Application rows will show "Not granted for Government of
+Ontario" until IT approves them.
+
+**2b. Submit a service desk ticket.** Adding the permissions doesn't by itself
+get them approved; the Azure team has to enable them on the backend.
+
+1. Open a ticket with the ITS Service Desk (*Report Issue* on the OPS
+   intranet).
+2. Ask for the ticket to be routed to **ITS > Service Modernization > GoCloud
+   RESPONSE AZURE**.
+3. Include the app's **Display name** and **Application (client) ID**, both on
+   the app's **Overview** page.
+4. Ask them to grant the **Sites.Selected** permissions for **SharePoint** and
+   **Microsoft Graph**.
+
+Expect questions, and don't assume the reviewer knows R. Ours told us they
+*normally do not grant Application-type permissions* and asked why we needed
+both delegated and application access for Graph. What to tell them:
+
+- **Delegated** permissions let R act as you, while you're signed in, limited
+  to what you can already see in SharePoint.
+- **Application** permissions are for scheduled scripts that run without
+  anyone signed in. Sites.Selected is the least-privilege version: it reaches
+  only sites an admin explicitly names.
+
+Approval can take a week and a half (ours took about three days).
+
+**Approval is not the end.** Permissions say *what* the app may do; they don't
+make sign-in work. You still need Step 3.
+
+## Step 3: Set up sign-in (Authentication)
+
+A new registration has no redirect URI, so sign-in fails with
+**AADSTS500113: No reply address is registered**. As the owner, you can fix
+this yourself:
+
+1. On the app, open **Authentication** and click **Add Redirect URI**.
+2. Choose the platform **Mobile and desktop applications** (Windows, UWP,
+   Console…).
+3. Leave the suggested URIs unticked and enter this custom redirect URI, then
+   click **Configure**:
+
+    ```
+    http://localhost:1410
+    ```
+
+4. On the **Settings** tab, set **Allow public client flows** to **Yes** and
+   save. This allows device-code sign-in, the fallback if the browser redirect
+   is ever blocked.
+
+Changes can take a minute or two to take effect.
+
+## Step 4: Set up R
+
+**Install the packages** (once):
+
+```{r}
+install.packages(c("AzureGraph", "Microsoft365R"))
+```
+
+"Package was built under R version 4.x.x" warnings are harmless.
+
+**Store your IDs in `.Renviron`** so they never appear in scripts. With
+sharepointless installed, one line does it (and sets them for the current
+session too):
+
+```{r}
+sharepointless::less_details_to_renviron(
+  tenant = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",  # Directory (tenant) ID
+  app    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"   # Application (client) ID
+)
+```
+
+Or by hand:
+
+1. In the RStudio console, run `usethis::edit_r_environ()`. The file opens as a
+   **tab in the editor pane**. Type into that tab, not the console. Typed into
+   the console, these lines fail with "unexpected symbol".
+2. Add these two lines, using the IDs from Step 1. Paste the raw value only: no
+   quotes, no angle brackets, no spaces around `=`.
+
+    ```
+    CLIMICROSOFT365_TENANT=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    CLIMICROSOFT365_AADAPPID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    ```
+
+3. Press **Enter** after the last line (R can skip a final line with no
+   newline), save with **Ctrl+S**, then **Session → Restart R**.
+4. Check that R sees both values:
+
+    ```{r}
+    sharepointless::less_details()
+    ```
+
+Both should print as 36-character IDs. If either is blank, the file wasn't
+saved or R wasn't restarted.
+
+## Step 5: Sign in and connect
+
+### With sharepointless
+
+```{r}
+library(sharepointless)
+
+# Paste a library's address straight from the browser...
+drive <- less_drive("https://ontariogov.sharepoint.com/sites/<YourSite>/Shared%20Documents/Forms/AllItems.aspx")
+
+# ...or a site address plus part of the library's name
+drive <- less_drive("https://ontariogov.sharepoint.com/sites/<YourSite>", library = "^Rapports")
+
+drive$list_files()
+```
+
+The first call opens a browser for sign-in (if R asks to create a directory for
+saved credentials, answer **Y**). After that, the saved sign-in is reused,
+including by scheduled scripts.
+
+### By hand, with AzureGraph and Microsoft365R
+
+**First time only:** create a cached login against *your* app. Passing `app =`
+is essential; without it, AzureGraph uses a built-in default app that can see
+sites but not their libraries.
+
+```{r}
+library(AzureGraph)
+library(Microsoft365R)
+library(tidyverse)
+
+gr <- create_graph_login(
+  Sys.getenv("CLIMICROSOFT365_TENANT"),
+  app = Sys.getenv("CLIMICROSOFT365_AADAPPID")
+)
+```
+
+- If R asks to create a directory for saved credentials, answer **Y**. That
+  cache is what lets later sessions skip the browser.
+- A browser tab opens for OPS sign-in. Close it when it says authentication is
+  complete.
+- Confirm the login carries the right permissions. The output must include
+  `Sites.ReadWrite.All`:
+
+```{r}
+gr$token$credentials$scope
+```
+
+**Every session after that:**
+
+```{r}
+gr <- get_graph_login(
+  Sys.getenv("CLIMICROSOFT365_TENANT"),
+  app = Sys.getenv("CLIMICROSOFT365_AADAPPID")
+)
+```
+
+**Connect to a site and library.** Use the *site* URL, not the URL of a library
+view. Trim anything from the library name onward (e.g.
+`/Forms/AllItems.aspx`).
+
+```{r}
+site <- gr$get_sharepoint_site(
+  "https://ontariogov.sharepoint.com/sites/<YourSite>"
+)
+
+# Library names on the site
+site$list_drives() |> map_chr(\(d) d$properties$name)
+
+# Pick one by partial match: avoids retyping curly apostrophes in French names
+drive <- site$list_drives() |>
+  keep(\(d) str_detect(d$properties$name, "^<start of library name>")) |>
+  pluck(1)
+
+drive$list_files() |> as_tibble()
+```
+
+If the last line returns your folders, you're done.
+
+## Troubleshooting
+
+Every error we actually hit, in roughly the order you'll meet them:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `library(Microsoft365R)` seems to hang | It's waiting at a hidden console prompt to create the credentials directory | Click in the console, type `Y`, press Enter |
+| `Error: unexpected symbol in "CLIMICROSOFT365_TENANT=..."` | `.Renviron` lines typed into the console | Put them in the `.Renviron` editor tab instead (Step 4), or use `less_details_to_renviron()` |
+| Browser shows AADSTS900023, tenant `'.onmicrosoft.com'` | Tenant ID is blank: `.Renviron` not loaded, or placeholders left in | Fix the file, save, restart R, check with `less_details()` |
+| Browser shows AADSTS500113, no reply address | App has no redirect URI | Step 3 |
+| AADSTS50011 | Redirect URI doesn't match | Make sure it's exactly `http://localhost:1410` under Mobile and desktop applications |
+| AADSTS7000218 | Public client flows off | Step 3, Settings tab |
+| AADSTS65001 or "Need admin approval" | Permissions not consented | Follow up on your service desk ticket (Step 2b) |
+| `No Microsoft Graph logins found for tenant` | `get_graph_login()` only *retrieves* a login | Run `create_graph_login()` once first (Step 5), or let `less_login()` do it |
+| `list_drives()` returns `character(0)`; `get_drive()` gives HTTP 403 or `argument to 'which' is not logical` | Login was created without `app =`, so it uses the default app, which has no Sites/Files scopes | Create a login with `app =` and check its scopes (Step 5) |
+| `get_sharepoint_site()` fails on a URL ending `/Forms/AllItems.aspx` | That's a library view, not a site | Use the site URL only, or use `less_drive()`, which accepts either |
+
+**Two logins for one tenant.** If you created a default-app login by mistake,
+`get_graph_login()` will make you choose between them every session, which
+breaks scheduled scripts. Check with `list_graph_logins()`, then run
+`delete_graph_login(Sys.getenv("CLIMICROSOFT365_TENANT"))`. It takes no `app`
+argument; pick the login that isn't yours from the prompt. If it removes both
+instead, just rerun `create_graph_login()` with `app =`.
+
+## Notes and gotchas
+
+**Don't rely on Microsoft365R's default scopes.** Called directly,
+`Microsoft365R::get_sharepoint_site()` asks for `Group.ReadWrite.All`,
+`Directory.Read.All`, `Sites.ReadWrite.All` and `Sites.Manage.All`, more than
+this app is approved for. That triggers an approval wall. The
+`create_graph_login()` / `gr$get_sharepoint_site()` route in Step 5 (which
+sharepointless uses) avoids it.
+
+**Scheduled jobs (Windows Task Scheduler).** A script run by Task Scheduler
+under your Windows account reuses your cached login and will usually work. It
+stops when Microsoft demands a fresh sign-in: after a password change, a forced
+re-authentication policy, or long inactivity. Run the script interactively once
+to seed the cache, and log errors to a file so a broken login doesn't go
+unnoticed.
+
+**The truly unattended route** is the Application `Sites.Selected` permission,
+which signs in as the app rather than you. Approval alone isn't enough. It also
+needs:
+
+- a site-level grant on each named site by a SharePoint admin (who handles this
+  in the OPS is unconfirmed)
+- a certificate (preferred) or client secret on the app registration
+
+We haven't set up the certificate yet.
+
+**Changing folder permissions** (e.g. making a folder read-only after a
+deadline) uses Graph's item permissions endpoint via `do_operation()`. Whether
+Graph accepts role changes on SharePoint-group grants is untested. If it
+doesn't, the fallback is the SharePoint REST API, which would need an
+additional SharePoint permission.

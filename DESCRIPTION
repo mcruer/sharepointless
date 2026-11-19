@@ -1,18 +1,33 @@
 Package: sharepointless
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Authors@R: c(
-    person(
-      "Jane", "Doe",
-      email = "jane@example.com",
-      role = c("aut", "cre")
-    )
-  )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
+Title: One-Line Access to 'SharePoint' Document Libraries
+Version: 0.0.1
+Authors@R:
+    person("Geordie", "McRuer", , "geo.mcruer@gmail.com", role = c("aut", "cre"))
+Description: Wraps 'Microsoft365R' and 'AzureGraph' in consistent, pipe-friendly
+    less_* functions so routine 'SharePoint' work takes one line: stored sign-in
+    details, a cached delegated sign-in, opening sites and document libraries
+    from the URL you copied out of your browser, and plain-language errors.
+    The raw 'Microsoft365R' objects stay available for anything not wrapped.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
 URL: https://github.com/mcruer/sharepointless
 BugReports: https://github.com/mcruer/sharepointless/issues
+Depends:
+    R (>= 4.1.0)
+Imports:
+    AzureGraph,
+    cli,
+    fs,
+    Microsoft365R,
+    purrr,
+    readr,
+    rlang,
+    stringr,
+    tibble
+Suggests:
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1

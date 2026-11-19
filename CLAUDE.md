@@ -5,9 +5,13 @@
 ## What this is
 
 An R package that wraps Microsoft365R / AzureGraph so routine SharePoint work
-takes one line instead of ten. It's a **general-purpose tool for anyone in the
-Ontario Public Service (OPS)** who works with SharePoint from R, not tied to
-any one branch, site or project.
+takes one line instead of ten. It's a **general-purpose tool for anyone in any
+Microsoft 365 organization** who works with SharePoint from R. Keep it free of
+anything specific to Geordie's work (sites, libraries, business logic): that
+belongs in his work-specific packages, not here. The one OPS-specific piece is
+the setup guide vignette (`vignettes/ops-setup.Rmd`), labelled as such.
+
+All exported functions start with `less_`.
 
 The first function to build: **list the contents of a SharePoint document
 library as a tidy tibble.** More functions follow as real needs show up.
@@ -28,19 +32,21 @@ Style: start minimal (functions + roxygen docs). Tests and vignettes come later.
 
 ## Who uses it
 
-OPS staff who have followed the setup guide ("Connecting R to SharePoint in the
-OPS"): each person registers **their own** Entra app, gets its permissions
-approved, and stores two IDs in `.Renviron`:
+Anyone whose IT department has approved an app registration for them. The main
+obstacle is permissions, not R; docs should say so. OPS staff have a full guide
+(`vignette("ops-setup")`). Each person registers **their own** Entra app, gets
+its permissions approved, and stores two IDs in `.Renviron`:
 
 ```
-CLIMICROSOFT365_TENANT=<tenant GUID>      # the same for everyone in the OPS
+CLIMICROSOFT365_TENANT=<tenant GUID>      # the same for everyone in an organization
 CLIMICROSOFT365_AADAPPID=<client GUID>    # each user's own app registration
 ```
 
-**Configuration:** nothing is hard-coded, not even the OPS tenant ID. Every
-value comes from the user's own setup. Follow the same configuration mechanism
-as Geordie's `ezekiel` package (find that repo and mirror its approach),
-including how missing values are detected and reported.
+**Configuration:** nothing is hard-coded, not even a tenant ID. Every value
+comes from the user's own setup. Mirrors `ezekiel`'s `ezql_details()` /
+`ezql_details_to_rprofile()` pattern as `less_details()` /
+`less_details_to_renviron()`, but writes to `.Renviron` rather than
+`.Rprofile`, because these are the env vars Microsoft365R itself reads.
 
 Assume users are competent in R but have never touched Entra, OAuth or Graph.
 Error messages should say what to do, in plain language, and point to the guide
@@ -64,7 +70,8 @@ drive <- site$list_drives() |>
 drive$list_files()   # data.frame: name, size, isdir, id
 ```
 
-Hard-won rules (each one cost real debugging time):
+Hard-won rules (each one cost real debugging time). These are AzureGraph /
+Microsoft365R behaviours, so they apply in any tenant, not just the OPS:
 - **Always pass `app =`.** Without it AzureGraph uses a default app (Azure CLI
   ID) whose token has no Sites/Files scopes. The site resolves, but
   `list_drives()` returns nothing and `get_drive()` gives a 403.
@@ -79,14 +86,22 @@ Hard-won rules (each one cost real debugging time):
 - Users paste **library view URLs** (`.../Shared%20Documents/Forms/AllItems.aspx`)
   as site URLs. Accepting either, and splitting out the site and library, would
   remove a common failure.
-- Library names can contain non-ASCII characters (French titles, curly
+- Library names can contain non-ASCII characters (accents, curly
   apostrophes U+2019). Match by regex or by ID; never require exact retyping.
 - Multiple cached logins for one tenant make `get_graph_login()` prompt, which
   breaks scheduled scripts. Always pass `app =` so it picks the right one.
 - Never put IDs, secrets or certificates in package code.
 
-Verified example site: `https://ontariogov.sharepoint.com/sites/EDU-Extranet/CBSD`
-(a subsite; Graph resolves it fine).
+Subsites (`/sites/A/B`) resolve fine through Graph.
+
+## Status (2026-11-19)
+
+Done, tested in the sandbox only against stubs (no tenant access):
+`less_details()`, `less_details_to_renviron()`, `less_login()`, `less_site()`,
+`less_drive()` (accepts library view URLs; `library =` is a case-insensitive
+regex or a drive ID; defaults to the site's default library). Next: the
+listing function, once Geordie has run `list_files(info = "all")` and shared
+the `glimpse()`.
 
 ## v1 scope
 
