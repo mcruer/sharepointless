@@ -50,6 +50,10 @@ drive <- less_drive("https://contoso.sharepoint.com/sites/Team/Shared%20Document
 # Or a site plus part of the library's name
 drive <- less_drive("https://contoso.sharepoint.com/sites/Team", library = "^Reports")
 
+# List a library's contents as a tibble (max_depth = Inf for everything below)
+less_contents("https://contoso.sharepoint.com/sites/Team/Shared%20Documents/Forms/AllItems.aspx",
+              max_depth = 1)
+
 # The raw Microsoft365R objects, for anything not wrapped
 site <- less_site("https://contoso.sharepoint.com/sites/Team")
 gr   <- less_login()

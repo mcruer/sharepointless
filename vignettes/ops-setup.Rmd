@@ -196,7 +196,8 @@ drive <- less_drive("https://ontariogov.sharepoint.com/sites/<YourSite>/Shared%2
 # ...or a site address plus part of the library's name
 drive <- less_drive("https://ontariogov.sharepoint.com/sites/<YourSite>", library = "^Rapports")
 
-drive$list_files()
+# Its contents as a tibble (add max_depth = Inf to include every subfolder)
+less_contents(drive)
 ```
 
 The first call opens a browser for sign-in (if R asks to create a directory for

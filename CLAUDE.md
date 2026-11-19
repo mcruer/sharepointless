@@ -96,12 +96,19 @@ Subsites (`/sites/A/B`) resolve fine through Graph.
 
 ## Status (2026-11-19)
 
-Done, tested in the sandbox only against stubs (no tenant access):
-`less_details()`, `less_details_to_renviron()`, `less_login()`, `less_site()`,
-`less_drive()` (accepts library view URLs; `library =` is a case-insensitive
-regex or a drive ID; defaults to the site's default library). Next: the
-listing function, once Geordie has run `list_files(info = "all")` and shared
-the `glimpse()`.
+v1 is built. `less_details()`, `less_details_to_renviron()`, `less_login()`,
+`less_site()`, `less_drive()` (accepts library view URLs; `library =` is a
+case-insensitive regex or a drive ID; defaults to the site's default library)
+are verified live by Geordie. `less_contents()` is tested in the sandbox against
+a fake drive built to match the real shape below; not yet run live.
+
+`list_files(info = "all")` shape (verified live): data.frame with `name`,
+`size` (int), `isdir`, `id`, `@microsoft.graph.downloadUrl`,
+`createdDateTime` / `lastModifiedDateTime` (chr, ISO 8601 UTC), `eTag`,
+`webUrl`, `cTag`, `isAuthoritative`, and nested data-frame columns
+`createdBy` / `lastModifiedBy` (1 col: `user`), `parentReference` (6),
+`file` (2), `fileSystemInfo` (2), `shared` (1). Columns can vary by folder
+(e.g. `folder` vs `file`), so dig defensively.
 
 ## v1 scope
 
@@ -109,12 +116,11 @@ the `glimpse()`.
    graph login; caches login/site/drive objects in a package-level environment
    so repeated calls don't re-authenticate. Check env vars up front with a
    helpful error if missing.
-2. **List a library's contents → tibble.** One level (`path` argument, relative
-   to the library root) and recursive (`max_depth`), with `path` and `depth`
-   columns. Include useful metadata (created/modified times as POSIXct,
-   created/modified by, `webUrl`, `id`), flattened from
-   `list_files(info = "all")`. *The exact shape of `info = "all"` is
-   unverified: have Geordie run it and `glimpse()` the result first.*
+2. **List a library's contents → tibble** (`less_contents()`). One level
+   (`path` argument, relative to the library root, or the folder in a pasted
+   browser URL) and recursive (`max_depth`), with `path` and `depth` columns,
+   created/modified times as local POSIXct, created/modified by, `web_url`,
+   `id`.
 3. **Escape hatch.** A way to get the raw Microsoft365R site/drive objects for
    anything the wrapper doesn't cover.
 

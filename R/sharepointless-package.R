@@ -1,5 +1,5 @@
 #' @keywords internal
-#' @importFrom rlang %||%
+#' @importFrom rlang %||% .data
 #' @importFrom Microsoft365R ms_site
 "_PACKAGE"
 

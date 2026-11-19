@@ -18,7 +18,9 @@ Depends:
 Imports:
     AzureGraph,
     cli,
+    dplyr,
     fs,
+    lubridate,
     Microsoft365R,
     purrr,
     readr,
