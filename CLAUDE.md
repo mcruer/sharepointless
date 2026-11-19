@@ -1,7 +1,5 @@
 # sharepointless: project brief
 
-> Working name. Rename freely; nothing below depends on it.
-
 ## What this is
 
 An R package that wraps Microsoft365R / AzureGraph so routine SharePoint work
@@ -17,7 +15,17 @@ The first function to build: **list the contents of a SharePoint document
 library as a tidy tibble.** More functions follow as real needs show up.
 
 Author: Geordie McRuer <geo.mcruer@gmail.com> · License: MIT.
-Style: start minimal (functions + roxygen docs). Tests and vignettes come later.
+Style: functions + roxygen docs, with offline testthat tests.
+
+## Tests
+
+`tests/testthat/` runs fully offline: `helper-fakes.R` builds fake libraries
+and drives (`fake_drive()` serves JSON shaped like the live
+`list_files(info = "all")` output), and tests swap internals with
+`local_mocked_bindings()` (`less_list_drives`, `less_site`,
+`less_renviron_path`). Never let a test read or write the real `.Renviron`
+or call Microsoft. Add a test with every new function or bug fix. Geordie
+runs them with `devtools::test()`.
 
 ## Who's writing it and how
 

@@ -63,7 +63,7 @@ less_details_to_renviron <- function(tenant, app, overwrite = FALSE) {
     ))
   }
 
-  renviron <- fs::path_home_r(".Renviron")
+  renviron <- less_renviron_path()
   current <- if (fs::file_exists(renviron)) readr::read_lines(renviron) else character()
   var_pattern <- stringr::str_c("^\\s*(", stringr::str_flatten(less_env_vars, "|"), ")\\s*=")
   existing <- stringr::str_subset(current, var_pattern)
@@ -115,4 +115,10 @@ less_check_details <- function(call = rlang::caller_env()) {
   }
 
   details
+}
+
+# The .Renviron R reads at startup (on Windows, usually in Documents). A
+# function so tests can point it at a temporary file.
+less_renviron_path <- function() {
+  fs::path_home_r(".Renviron")
 }
