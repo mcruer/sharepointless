@@ -100,8 +100,8 @@ v1 is built. `less_details()`, `less_details_to_renviron()`, `less_login()`,
 `less_site()`, `less_drive()` (accepts library view URLs; `library =` is a
 case-insensitive regex or a drive ID; defaults to the site's default library)
 are verified live by Geordie. `less_url()` (parse only, prints site/library/folder) is tested in the sandbox.
-`less_contents()` is tested in the sandbox against
-a fake drive built to match the real shape below; not yet run live.
+`less_contents()` verified live 2026-11-19: folder from a pasted URL, `path = ""`
+override, `max_depth = 1`, folder names with spaces.
 
 `list_files(info = "all")` shape (verified live): data.frame with `name`,
 `size` (int), `isdir`, `id`, `@microsoft.graph.downloadUrl`,
