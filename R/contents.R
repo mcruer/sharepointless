@@ -28,13 +28,20 @@
 #' @return A tibble with one row per file or folder, in folder order:
 #'   * `name`: the file or folder name
 #'   * `is_folder`: `TRUE` for folders
+#'   * `extension`: the file extension in lower case, e.g. `"xlsx"`, so
+#'     `filter(extension %in% c("xlsx", "xls"))` finds Excel files. `NA` for
+#'     folders and files without one.
 #'   * `size`: an [fs::fs_bytes()] number, printed as e.g. `1.05G`. For a
 #'     folder, the total size of everything in it. Sorts, filters and sums
 #'     like any number.
 #'   * `modified`, `created`: date-times (POSIXct), in your computer's time zone
 #'   * `modified_by`, `created_by`: people's display names (or an app's name,
 #'     e.g. a Power Automate flow, when no person was involved)
-#'   * `depth`: `0` for items in the starting folder, `1` one level down, and so on
+#'   * `depth`: `0` for items in the starting folder, `1` one level down, and
+#'     so on. Counted from where the listing starts, not the library root.
+#'   * `folder`: the full path of the folder the item is in, e.g.
+#'     `"/Budget/2025"` (`"/"` at the top of the library). Join on it to
+#'     match items to the folder they're in: it equals that folder's `path`.
 #'   * `path`: the item's full path in the library, starting with `/`, e.g.
 #'     `"/Budget/2025/plan.xlsx"`. Feed it back to `path` to go there.
 #'   * `web_url`: the item's address, to open it in a browser
@@ -117,16 +124,23 @@ less_tidy_items <- function(raw, folder, depth) {
 
   name <- as.character(raw$name)
 
+  is_folder <- as.logical(raw$isdir)
+  # Computed here, not inside tibble(): there, `folder` would mean the new column.
+  in_folder <- stringr::str_c("/", folder)
+  item_path <- if (folder == "") stringr::str_c("/", name) else stringr::str_c(in_folder, "/", name)
+
   tibble::tibble(
     name        = name,
-    is_folder   = as.logical(raw$isdir),
+    is_folder   = is_folder,
+    extension   = less_extension(name, is_folder),
     size        = fs::as_fs_bytes(as.numeric(raw$size)),
     modified    = less_parse_time(less_dig(raw, "lastModifiedDateTime")),
     modified_by = less_who(raw, "lastModifiedBy"),
     created     = less_parse_time(less_dig(raw, "createdDateTime")),
     created_by  = less_who(raw, "createdBy"),
     depth       = depth,
-    path        = if (folder == "") stringr::str_c("/", name) else stringr::str_c("/", folder, "/", name),
+    folder      = in_folder,
+    path        = item_path,
     web_url     = less_dig(raw, "webUrl"),
     id          = less_dig(raw, "id")
   )
@@ -134,12 +148,19 @@ less_tidy_items <- function(raw, folder, depth) {
 
 less_contents_template <- function() {
   tibble::tibble(
-    name = character(), is_folder = logical(), size = fs::fs_bytes(),
+    name = character(), is_folder = logical(), extension = character(),
+    size = fs::fs_bytes(),
     modified = as.POSIXct(character(), tz = ""), modified_by = character(),
     created = as.POSIXct(character(), tz = ""), created_by = character(),
-    depth = numeric(), path = character(),
+    depth = numeric(), folder = character(), path = character(),
     web_url = character(), id = character()
   )
+}
+
+# "xlsx" for "Plan.XLSX"; NA for folders and files without an extension.
+less_extension <- function(name, is_folder) {
+  ext <- name |> fs::path_ext() |> stringr::str_to_lower()
+  dplyr::if_else(is_folder | ext == "", NA_character_, ext)
 }
 
 # A person's display name, or the app's (e.g. a Power Automate flow) when no

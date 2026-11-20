@@ -40,8 +40,8 @@ test_that("a path from the output goes back in as path", {
 test_that("columns come out in the documented order and types", {
   out <- less_contents(fake_drive(example_tree()))
   expect_named(out, c(
-    "name", "is_folder", "size", "modified", "modified_by",
-    "created", "created_by", "depth", "path", "web_url", "id"
+    "name", "is_folder", "extension", "size", "modified", "modified_by",
+    "created", "created_by", "depth", "folder", "path", "web_url", "id"
   ))
   expect_s3_class(out$size, "fs_bytes")
   expect_s3_class(out$modified, "POSIXct")
@@ -120,4 +120,24 @@ test_that("a missing relative folder explains paths are relative to the URL", {
   expect_error(less_contents(folder_url, "MPIP"), "relative to the folder in your URL")
   expect_no_error(try(less_contents(folder_url, "/MPIP"), silent = TRUE))
   expect_error(less_contents(folder_url, "/MPIP"), "Check the spelling")
+})
+
+test_that("folder is the containing folder's path, so it joins to that folder's path", {
+  out <- less_contents(fake_drive(example_tree()), max_depth = Inf)
+  expect_equal(out$folder[out$name == "Travel.docx"], "/")
+  expect_equal(out$folder[out$name == "plan.xlsx"], "/Budget/2025")
+  expect_equal(out$folder[out$name == "Empty"], out$path[out$name == "2025"])
+  expect_true(all(out$folder[out$depth > 0] %in% out$path))
+})
+
+test_that("extension is lower-case, and NA for folders and files without one", {
+  tree <- list("/" = c(
+    fake_item("Plan.XLSX"), fake_item("notes.docx"), fake_item("README"),
+    fake_item("v1.2 report.csv"), fake_item("Budget.2025", is_folder = TRUE)
+  ))
+  out <- less_contents(fake_drive(tree))
+  expect_equal(
+    out$extension[match(c("Plan.XLSX", "notes.docx", "README", "v1.2 report.csv", "Budget.2025"), out$name)],
+    c("xlsx", "docx", NA, "csv", NA)
+  )
 })

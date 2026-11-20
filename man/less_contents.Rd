@@ -40,13 +40,20 @@ A tibble with one row per file or folder, in folder order:
 \itemize{
 \item \code{name}: the file or folder name
 \item \code{is_folder}: \code{TRUE} for folders
+\item \code{extension}: the file extension in lower case, e.g. \code{"xlsx"}, so
+\code{filter(extension \%in\% c("xlsx", "xls"))} finds Excel files. \code{NA} for
+folders and files without one.
 \item \code{size}: an \code{\link[fs:fs_bytes]{fs::fs_bytes()}} number, printed as e.g. \verb{1.05G}. For a
 folder, the total size of everything in it. Sorts, filters and sums
 like any number.
 \item \code{modified}, \code{created}: date-times (POSIXct), in your computer's time zone
 \item \code{modified_by}, \code{created_by}: people's display names (or an app's name,
 e.g. a Power Automate flow, when no person was involved)
-\item \code{depth}: \code{0} for items in the starting folder, \code{1} one level down, and so on
+\item \code{depth}: \code{0} for items in the starting folder, \code{1} one level down, and
+so on. Counted from where the listing starts, not the library root.
+\item \code{folder}: the full path of the folder the item is in, e.g.
+\code{"/Budget/2025"} (\code{"/"} at the top of the library). Join on it to
+match items to the folder they're in: it equals that folder's \code{path}.
 \item \code{path}: the item's full path in the library, starting with \code{/}, e.g.
 \code{"/Budget/2025/plan.xlsx"}. Feed it back to \code{path} to go there.
 \item \code{web_url}: the item's address, to open it in a browser

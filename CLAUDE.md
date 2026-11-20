@@ -137,8 +137,9 @@ Shared URL/path plumbing lives in `R/paths.R` (`less_locate()`,
    so repeated calls don't re-authenticate. Check env vars up front with a
    helpful error if missing.
 2. **List a library's contents → tibble** (`less_contents(x, path, max_depth,
-   library)`). One level or recursive (`max_depth`), with absolute `path` and
-   `depth` columns,
+   library)`). One level or recursive (`max_depth`), with absolute `path`,
+   `folder` (containing folder's path, so items join to their folder's row),
+   lower-case `extension`, and `depth` (from the starting folder) columns,
    created/modified times as local POSIXct, created/modified by, `web_url`,
    `id`.
 3. **Escape hatch.** A way to get the raw Microsoft365R site/drive objects for
